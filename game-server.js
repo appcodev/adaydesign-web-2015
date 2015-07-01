@@ -3,7 +3,9 @@ var express = require('express'),
     server = require('http').createServer(app),
     io = require('socket.io').listen(server);
 
-server.listen(3000);
+server.listen(3000, function(){
+    console.log('>> server start listening...');
+});
 
 app.get('/',function(req, res){
     res.sendFile(__dirname+'/client/index.html');
@@ -17,12 +19,13 @@ io.sockets.on('connection', function(socket){
      
     socket.on('new player', function(data){
         var playerId = socket["id"];
-        console.log('new player:'+playerId);
+        
         var emitData = {"id":playerId,"x":data["x"],"y":data["y"],"frame":data["frame"]};
         io.sockets.emit('player id',emitData);
         
         io.sockets.emit('list players',{"for id":playerId,"list":listPlayers});
         addNewPlayer(emitData);
+        console.log('new player:'+playerId+" | total players:"+listPlayers.length);
     });
     
     socket.on('send pos', function(data){
@@ -33,9 +36,9 @@ io.sockets.on('connection', function(socket){
     
     //disconnect
     socket.on('disconnect', function(){
-        console.log('disconect... who? '+socket["id"]);
         io.sockets.emit('who leave',socket["id"]);
         clientDisconnect(socket["id"]);
+        console.log('disconect... who? '+socket["id"]+" | total:"+listPlayers.length);
     });
 });
 

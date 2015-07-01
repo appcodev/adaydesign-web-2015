@@ -1,3 +1,8 @@
+var socket = io.connect();
+socket.on('connect_error', function(err){
+    console.log('disconnect from server...');
+});
+
 enchant();
 
 /*
@@ -8,6 +13,8 @@ designed from idea RPG game concept
 @since 2015
 @link www.adayd3sign.com
 
+@version 1.3
+- Online version by Node.js
 @version 1.2
 - Ending scene
 - Sound
@@ -25,7 +32,7 @@ designed from idea RPG game concept
 - Teleport
 - Board
 */
-var version = "1.2";
+var version = "1.3";
 
 /////////////////////////////////// DATA /////////////////////////////////////
 //data
@@ -362,6 +369,20 @@ DarkKnight = enchant.Class.create(Monster, {
     }
 });
 
+
+//friends
+Friend = enchant.Class.create(Sprite, {
+   initialize: function(x,y,id,mframe){
+       var game = enchant.Game.instance;
+       enchant.Sprite.call(this,32,32);
+       this.x = x;
+       this.y = y;
+       this.image = game.assets["chara5.png"];
+       this.id = id==undefined?undefined:id;
+       this.frame = mframe==undefined?0:mframe;
+   } 
+});
+
 //player
 Player = enchant.Class.create(Sprite, {
     initialize: function(tileX,tileY,map,inObjLayer,trapLayer,itemsPanel){
@@ -374,11 +395,12 @@ Player = enchant.Class.create(Sprite, {
         this.inObjLayer     = inObjLayer;
         this.trapLayer      = trapLayer;
         this.itemsPanel     = itemsPanel;
+        this.id             = undefined;
         
         //sound
         this.soundFoundItem = game.assets["sd-founditem.wav"];
         this.soundHurt      = game.assets["sd-hurt.wav"];
-        this.soundBomb      = game.assets["sd-bomb.wav"];
+        //this.soundBomb      = game.assets["sd-bomb.wav"];
         
         //frame
         this.frameUpWalk    = [27,28,29];
@@ -414,6 +436,10 @@ Player = enchant.Class.create(Sprite, {
                 this.moveBy(this.tx,this.ty);
                 this.frame = this.framePresent[this.age%3]+this.charHasShieldFrame();
                 this.isMoving = false;
+                
+                //send position
+                sendPosXY(socket);
+                
             }else{
                 this.tx = this.ty = 0;
                 //console.log("tx:"+this.tx+"|ty:"+this.ty);
@@ -506,6 +532,11 @@ Player = enchant.Class.create(Sprite, {
         });
     },
     
+    sendPosXY: function(svSocket){
+        //send position
+        svSocket.emit('send pos',{"id":this.id,"x":this.x,"y":this.y,"frame":this.frame});
+    },
+    
     buySomething: function(buy,cost,tileX,tileY){
         if(!this.buying){
             //start buy
@@ -582,6 +613,8 @@ Player = enchant.Class.create(Sprite, {
     gotoTileXY: function(tileX,tileY){
         //3*16+8,3*16
         this.moveTo((tileX-1)*16+8,(tileY-1)*16,5);
+        //send position
+        sendPosXY(socket);
     },
     
     inventoryIsFull: function(){
@@ -656,7 +689,7 @@ Player = enchant.Class.create(Sprite, {
                                         
                                         //sound
                                         if(itemNumber!=269){//heal has play sound after that
-                                            this.soundFoundItem.play();
+                                            this.soundFoundItem.play(true);
                                         }
                                         //effect
                                         showGetItemEffect(itemNumber,clTileX,clTileY,this.bgMap);
@@ -664,7 +697,7 @@ Player = enchant.Class.create(Sprite, {
                                         this.itemsPanel.updateInventory(this.items);
                                         
                                     }else if(itemNumber == -1){//bomb
-                                        this.soundBomb.play();
+                                        //this.soundBomb.play();
                                         showBombEffect(clTileX,clTileY,this.bgMap);
                                         this.damaged(0.7);//bomb damage
                                     }
@@ -719,8 +752,6 @@ Player = enchant.Class.create(Sprite, {
     },//end function checkCollisionInteractiveObject
     
     deadAction: function(){
-        //go to town
-        this.gotoTileXY(55,11);
         //lose all coins
         var uItems = new Array();
         for(var i=0;i<this.items.length;i++){
@@ -741,9 +772,14 @@ Player = enchant.Class.create(Sprite, {
         //action
         this.framePresent   = this.frameDownWalk; 
         this.frame          = this.framePresent[1];
-
+        
+        //go to town
+        this.gotoTileXY(55,11);
+        
         //update item panel
         this.itemsPanel.updateInventory(this.items);
+        
+        
     },
     
     damaged: function(damage){
@@ -761,7 +797,7 @@ Player = enchant.Class.create(Sprite, {
             this.hp -= (damage-absDamage);
             
             //sound
-            this.soundHurt.play();
+            this.soundHurt.play(true);
             
             console.log("hp:"+this.hp+"/"+this.maxHp+" |damage:"+damage+",abs:"+absDamage+",hit:"+(damage-absDamage));
             
@@ -778,7 +814,7 @@ Player = enchant.Class.create(Sprite, {
         //increase hp
         this.hp = Math.min(this.hp+healPoint,this.maxHp);
         console.log("heal +0.5 | hp:"+this.hp);
-        this.soundFoundItem.play();
+        this.soundFoundItem.play(true);
     },
     
     countItem: function(itemNum){
@@ -1304,7 +1340,7 @@ function showEndingGame(){
     
     //sound effect ending
     var soundEnding = game.assets["sd-success.wav"];
-    soundEnding.play();
+    soundEnding.play(true);
     
     //bg
     var bgLabel = new Label();
@@ -1423,7 +1459,7 @@ function showEndingDead(player){
     
     //sound
     var soundDead = game.assets["sd-dead.wav"];
-    soundDead.play();
+    soundDead.play(true);
     
     //bg
     var bgLabel = new Label();
@@ -1465,13 +1501,26 @@ function showEndingDead(player){
     game.rootScene.addChild(group);
 }
 
+//other player (Friend Class)
+var otherPlayers = new Array();
+//function add friends
+function addNewFriend(data,group,player){
+    //console.log('add new friend');
+    //console.log(data);
+    var newFnd = new Friend(data['x'],data['y'],data['id'],data['frame']);
+    //console.log(newFnd);
+    group.insertBefore(newFnd,player);
+    
+    otherPlayers.push(newFnd);
+}
+
 //window onload
 window.onload = function(){
     //320x200, 320x240, 640,400, 512,320
     var core = new Core(512,320);
     core.fps = 15;
     core.preload("tile1.png","chara0.png","chara5.png","chara6.png","chara7.png","btn1.png",
-                 "sd-bgm.wav","sd-bomb.wav","sd-dead.wav","sd-founditem.wav","sd-hurt.wav","sd-success.wav");
+                 "sd-bgm.wav","sd-dead.wav","sd-founditem.wav","sd-hurt.wav","sd-success.wav");
 
     
     core.onload = function(){
@@ -1566,8 +1615,8 @@ window.onload = function(){
         createStatusPanel(4,4,core,hpLabel,itemsLabel,shieldLabel);
         
         //play sound
-        bgm.volume = 0.3;
-        bgm.play();
+        //bgm.volume = 0.3;
+        bgm.play(true);
         
         core.rootScene.addEventListener("enterframe", function(){
             var x = Math.min(0,core.width/2-pPlayer.x-16);
@@ -1584,9 +1633,63 @@ window.onload = function(){
             shieldLabel.updateValue(pPlayer.shield);
         
             if(bgm.currentTime >= bgm.duration){
-                bgm.play();
+                bgm.play(true);
             }
         });
+        
+        ///////////////////////////////// Connection /////////////////////////////
+        
+        //new player
+        socket.emit('new player',{"x":pPlayer.x,"y":pPlayer.y,"frame":pPlayer.frame});
+        
+        //recieve data
+        socket.on('player id', function(data){
+            if(pPlayer.id==undefined){
+                pPlayer.id = data["id"];
+                console.log("new player id:"+pPlayer.id);
+            }else{
+                //add friends
+                addNewFriend(data,bgMap,pPlayer);
+            }
+        });
+        
+        socket.on('list players', function(data){
+            if(data['for id']==pPlayer.id){
+                console.log('accept list player data');
+                for(var i=0;i<data['list'].length;i++){
+                    addNewFriend(data['list'][i],bgMap,pPlayer);
+                }
+            }
+        });
+        
+        socket.on('update pos', function(data){
+            if(pPlayer.id!=data['id']){
+                console.log('rcv update pos- id:'+data["id"]+" x:"+data["x"]+" y:"+data["y"]);
+                for(var i=0;i<otherPlayers.length;i++){
+                    if(otherPlayers[i].id==data['id']){
+                        otherPlayers[i].x = data['x'];
+                        otherPlayers[i].y = data['y'];
+                        otherPlayers[i].frame = data['frame'];
+                    }
+                }
+            }
+        });
+        
+        socket.on('who leave', function(dIndex){
+            var index;
+            for(var i=0; i<otherPlayers.length; i++){
+                if(otherPlayers[i].id==dIndex){
+                    index = i;
+                    break;
+                }
+            }
+            
+            if(index){
+                otherPlayers[index].remove();
+                otherPlayers.splice(index,1);
+            }
+        });
+        
         
     };
     core.start();
