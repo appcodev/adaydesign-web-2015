@@ -438,7 +438,7 @@ Player = enchant.Class.create(Sprite, {
                 this.isMoving = false;
                 
                 //send position
-                sendPosXY(socket);
+                this.sendPosXY(socket);
                 
             }else{
                 this.tx = this.ty = 0;
@@ -614,7 +614,7 @@ Player = enchant.Class.create(Sprite, {
         //3*16+8,3*16
         this.moveTo((tileX-1)*16+8,(tileY-1)*16,5);
         //send position
-        sendPosXY(socket);
+        this.sendPosXY(socket);
     },
     
     inventoryIsFull: function(){
