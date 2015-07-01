@@ -1,0 +1,18 @@
+{
+    "name":"aweb2015-online",
+    "version":"1.3.0",
+    "description":"adaydesign website 2015 - online",
+    "homepage":"http://www.adayd3sign.com",
+    "author": {
+        "name": "Chalermchon Samana",
+        "email": "appcodev@gmail.com"
+    },
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/appcodev/adaydesign-web-2015"
+    },
+    "dependencies":{
+        "socket.io":"1.3.5",
+        "express":"4.13.0"
+    }
+}
