@@ -976,6 +976,104 @@ ShieldLabel = enchant.Class.create(ItemsPointLabel,{
     }
 });
 
+//chat button + panel
+ChatButton = enchant.Class.create(Sprite, {
+    initialize: function(player){
+        enchant.Sprite.call(this,16,16);
+        var game = enchant.Game.instance;
+        
+        this.image = game.assets['tile1.png'];
+        this.frame = 324;
+        this.x = 10*16;
+        this.y = 1.5*16;
+        this.showHint = true;
+        this.turnOn = false;
+        game.rootScene.addChild(this);
+        //animation
+        this.tl.moveBy(0,-3,10).moveBy(0,3,15).loop();
+        //action
+        this.defY = 45;
+        this.on('touchstart', function(){
+            if(this.showHint){
+               this.showHint = false;
+               this.hintLabel.remove();
+            }
+            //switch
+            this.turnOnChat(!this.turnOn);
+        });
+        
+        //component
+        //hint label
+        this.hintLabel = new Label('<<  click for chat!');
+        this.hintLabel.width = 96;
+        this.hintLabel.height = 14;
+        this.hintLabel.font = '12px';
+        this.hintLabel.color = 'white';
+        this.hintLabel.x = this.x+22;
+        this.hintLabel.y = this.y;
+        this.hintLabel.textAlign = 'center';
+        this.hintLabel.backgroundColor = 'rgba(0,0,0,0.6)';
+        game.rootScene.addChild(this.hintLabel);
+        
+        //bg chat
+        this.panelGroup = new Group();
+        
+        //bg
+        var bgLabel = new Label();
+        bgLabel.width = 228;
+        bgLabel.height = 32;
+        bgLabel.backgroundColor = "rgba(0,0,0,0.6)";
+        this.panelGroup.addChild(bgLabel);
+
+        //input text
+        this.inputText = new InputTextBox();
+        this.inputText.placeholder = 'say something.';
+        this.inputText.value = '';
+        this.inputText.opacity = 0.8;
+
+        //send button
+        var button = new Sprite(64,32);
+        button.image = game.assets["btn1.png"];
+        button.frame = 8;
+        button.x = this.inputText.width+8;
+        button.y = this.inputText.y;
+        this.panelGroup.addChild(button);
+        
+        //send button action
+        var cbp = this;
+        button.on('touchstart', function(){
+            
+            var word = cbp.inputText.value;
+            if(word!=undefined && word!=""){
+                console.log('say:'+word);
+                //reset
+                cbp.turnOnChat(false);
+            }
+        });
+        
+        this.panelGroup.x = 4;
+        this.panelGroup.y = -this.defY;
+        
+        this.inputText.x = this.panelGroup.x+2;
+        this.inputText.y = this.panelGroup.y+2;
+
+        game.rootScene.addChild(this.panelGroup);
+        game.rootScene.addChild(this.inputText);
+        
+    },
+    
+    turnOnChat: function(on){
+        this.turnOn = on;
+            
+        this.frame = this.turnOn?325:324;
+        this.panelGroup.y = this.turnOn?this.defY:-this.defY;
+        this.inputText.y = (this.turnOn?this.defY:-this.defY)+2;
+        this.inputText.focused = false;
+        this.inputText.value = '';
+    }
+});
+
+
 
 
 ///////////////////////////////////////////////// FUNCTIONS ////////////////////////////////////////
@@ -1389,20 +1487,29 @@ function showEndingGame(){
         btn.frame = 1+(i*2);
         
         btn.addEventListener("touchstart",function(e){
+            var site;
             switch(this.frame){
                 case 1:{
-                    console.log("goto www.adaydesign.wordpress.com");
+                    //console.log("goto www.adaydesign.wordpress.com");
+                    site = 'http://adayd3sign.wordpress.com';
                     break;
                 }
                 case 3:{
-                    console.log("goto www.facebook.com/adaydesignblog");
+                    //console.log("goto www.facebook.com/adaydesignblog");
+                    site = 'https://www.facebook.com/adaydesignBlog';
                     break;
                 }
                 case 5:{
-                    console.log("goto www.appcodev.com");
+                    //console.log("goto www.appcodev.com");
+                    site = 'http://www.appcodev.com';
                     break;
                 }
             }
+            
+            if(site){
+                window.open(site, '_blank');
+            }
+            
         });
         
         group2.addChild(btn);
@@ -1599,6 +1706,7 @@ window.onload = function(){
         bgMap.addChild(fgMap);
         core.rootScene.addChild(bgMap);
         
+        
         bgMap.addEventListener("enterframe", function(){
             
             //collision with monster
@@ -1613,6 +1721,9 @@ window.onload = function(){
         
         //create status panel
         createStatusPanel(4,4,core,hpLabel,itemsLabel,shieldLabel);
+        //chat panel
+        var chatButton = new ChatButton(pPlayer);
+        core.rootScene.addChild(chatButton);
         
         //play sound
         //bgm.volume = 0.3;
