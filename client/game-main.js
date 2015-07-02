@@ -372,7 +372,7 @@ DarkKnight = enchant.Class.create(Monster, {
 
 //friends
 Friend = enchant.Class.create(Sprite, {
-   initialize: function(x,y,id,mframe){
+    initialize: function(x,y,id,mframe){
        var game = enchant.Game.instance;
        enchant.Sprite.call(this,32,32);
        this.x = x;
@@ -380,7 +380,19 @@ Friend = enchant.Class.create(Sprite, {
        this.image = game.assets["chara5.png"];
        this.id = id==undefined?undefined:id;
        this.frame = mframe==undefined?0:mframe;
-   } 
+    },
+
+    say: function(msg,bgMap){
+        var fPos = this.posTileXY();
+        showNotice(msg,fPos["tileX"],fPos["tileY"],bgMap,1,"ptalk",true,this);
+    },
+    
+    posTileXY: function(){
+        var tileWidth = 16;//fix
+        var tileNX = Math.round(this.x/tileWidth);
+        var tileNY = Math.round(this.y/tileWidth);
+        return {"tileX":tileNX,"tileY":tileNY};
+    }
 });
 
 //player
@@ -530,6 +542,17 @@ Player = enchant.Class.create(Sprite, {
             }
             
         });
+    },
+    
+    say: function(msg){
+        var pPos = this.posTileXY();
+        showNotice(msg,pPos["tileX"],pPos["tileY"],this.bgMap,1,"ptalk",true,this);
+    },
+    
+    posTileXY: function(){
+        var tileNX = Math.round(this.x/this.inObjLayer.tileWidth);
+        var tileNY = Math.round(this.y/this.inObjLayer.tileHeight);
+        return {"tileX":tileNX,"tileY":tileNY};
     },
     
     sendPosXY: function(svSocket){
@@ -1045,10 +1068,14 @@ ChatButton = enchant.Class.create(Sprite, {
             
             var word = cbp.inputText.value;
             if(word!=undefined && word!=""){
-                console.log('say:'+word);
-                //reset
-                cbp.turnOnChat(false);
+                player.say(word);
+                
+                //send talk
+                socket.emit('send msg',{"id":player.id,"msg":word});
             }
+            
+            //reset
+            cbp.turnOnChat(false);
         });
         
         this.panelGroup.x = 4;
@@ -1068,7 +1095,7 @@ ChatButton = enchant.Class.create(Sprite, {
         this.frame = this.turnOn?325:324;
         this.panelGroup.y = this.turnOn?this.defY:-this.defY;
         this.inputText.y = (this.turnOn?this.defY:-this.defY)+2;
-        this.inputText.focused = false;
+        this.inputText.focused = this.turnOn;
         this.inputText.value = '';
     }
 });
@@ -1206,10 +1233,11 @@ function showShopPanel(shopName,descript,service,tileX,tileY,player){
 }
 
 //show notice
-function showNotice(message,tileX,tileY,bgMap,line,theme,ignore){
+function showNotice(message,tileX,tileY,bgMap,line,theme,ignore,player){
     var bX = tileX,bY = tileY;
     var read = readBoard[bX+""+bY];
     ignore = ignore==undefined?false:ignore;
+    message = message.replace(/<(?:.|\n)*?>/gm, '');//plain text
     if(!read || ignore){
         var game = enchant.Game.instance;
         
@@ -1232,6 +1260,10 @@ function showNotice(message,tileX,tileY,bgMap,line,theme,ignore){
             msgLabel.backgroundColor = "rgba(250,55,55,0.9)";
             msgLabel.color = "rgb(255,255,255)";
             tileY = tileY-1.5;
+        }else if(theme=="ptalk"){
+            msgLabel.backgroundColor = "rgba(222,204,98,0.9)";
+            msgLabel.color = "rgb(0,0,0)";
+            msgLabel.width = 8+message.length*8;
         }
         
         msgLabel.font = "11px arial";
@@ -1259,6 +1291,16 @@ function showNotice(message,tileX,tileY,bgMap,line,theme,ignore){
             readBoard[bX+""+bY]=false;
             group.remove();
         });
+        
+        //ptalk only
+        if(theme=="ptalk" && player){
+            group.on('enterframe', function(){
+                var ptlXY = player.posTileXY();
+                var gx = (ptlXY["tileX"]*16)-(msgLabel.width/2)+8;
+                var gy = (ptlXY["tileY"]*16)-(msgLabel.height*1.4);
+                group.moveTo(gx,gy,8);
+            });
+        }
         
     }   
 }
@@ -1781,6 +1823,19 @@ window.onload = function(){
                         otherPlayers[i].x = data['x'];
                         otherPlayers[i].y = data['y'];
                         otherPlayers[i].frame = data['frame'];
+                        break;
+                    }
+                }
+            }
+        });
+        
+        socket.on('update msg', function(data){
+            if(pPlayer.id!=data["id"]){
+                for(var i=0;i<otherPlayers.length;i++){
+                    if(otherPlayers[i].id==data['id']){
+                        console.log('p :'+data['id']+" say:"+data['msg']);
+                        otherPlayers[i].say(data['msg'],bgMap);
+                        break;
                     }
                 }
             }

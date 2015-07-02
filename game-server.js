@@ -34,6 +34,10 @@ io.sockets.on('connection', function(socket){
         updatePosData(data);
     });
     
+    socket.on('send msg', function(data){
+        io.sockets.emit('update msg',data);
+    });
+    
     //disconnect
     socket.on('disconnect', function(){
         io.sockets.emit('who leave',socket["id"]);
