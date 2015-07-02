@@ -1669,7 +1669,7 @@ window.onload = function(){
     var core = new Core(512,320);
     core.fps = 15;
     core.preload("tile1.png","chara0.png","chara5.png","chara6.png","chara7.png","btn1.png",
-                 "sd-bgm.wav","sd-dead.wav","sd-founditem.wav","sd-hurt.wav","sd-success.wav");
+                 "sd-dead.wav","sd-founditem.wav","sd-hurt.wav","sd-success.wav");
 
     
     core.onload = function(){
@@ -1679,7 +1679,7 @@ window.onload = function(){
         randomTreasure(inObjData["54"]);
         
         //sound
-        bgm = core.assets["sd-bgm.wav"];
+        //bgm = core.assets["sd-bgm.wav"];
         
         //add status panel
         var hpLabel = new HPLabel(5);//fix max
@@ -1769,7 +1769,7 @@ window.onload = function(){
         
         //play sound
         //bgm.volume = 0.3;
-        bgm.play(true);
+        //bgm.play(true);
         
         core.rootScene.addEventListener("enterframe", function(){
             var x = Math.min(0,core.width/2-pPlayer.x-16);
@@ -1785,9 +1785,9 @@ window.onload = function(){
             //update shield
             shieldLabel.updateValue(pPlayer.shield);
         
-            if(bgm.currentTime >= bgm.duration){
-                bgm.play(true);
-            }
+            //if(bgm.currentTime >= bgm.duration){
+            //    bgm.play(true);
+            //}
         });
         
         ///////////////////////////////// Connection /////////////////////////////
