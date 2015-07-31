@@ -13,6 +13,8 @@ designed from idea RPG game concept
 @since 2015
 @link www.adayd3sign.com
 
+@version 1.3.1
+- fix bug : text, disconnected player
 @version 1.3
 - Online version by Node.js
 @version 1.2
@@ -32,7 +34,7 @@ designed from idea RPG game concept
 - Teleport
 - Board
 */
-var version = "1.3";
+var version = "1.3.1";
 
 /////////////////////////////////// DATA /////////////////////////////////////
 //data
@@ -1237,7 +1239,7 @@ function showNotice(message,tileX,tileY,bgMap,line,theme,ignore,player){
     var bX = tileX,bY = tileY;
     var read = readBoard[bX+""+bY];
     ignore = ignore==undefined?false:ignore;
-    message = message.replace(/<(?:.|\n)*?>/gm, '');//plain text
+    
     if(!read || ignore){
         var game = enchant.Game.instance;
         
@@ -1261,9 +1263,13 @@ function showNotice(message,tileX,tileY,bgMap,line,theme,ignore,player){
             msgLabel.color = "rgb(255,255,255)";
             tileY = tileY-1.5;
         }else if(theme=="ptalk"){
+            message = message.replace(/<(?:.|\n)*?>/gm, '');//plain text
+            if(message.length >= 15){
+                message = message.substr(0,15)+'..';
+            }
             msgLabel.backgroundColor = "rgba(222,204,98,0.9)";
             msgLabel.color = "rgb(0,0,0)";
-            msgLabel.width = 8+message.length*8;
+            msgLabel.width = message.length*6.5;
         }
         
         msgLabel.font = "11px arial";
@@ -1842,7 +1848,7 @@ window.onload = function(){
         });
         
         socket.on('who leave', function(dIndex){
-            var index;
+            var index=-1;
             for(var i=0; i<otherPlayers.length; i++){
                 if(otherPlayers[i].id==dIndex){
                     index = i;
@@ -1850,7 +1856,7 @@ window.onload = function(){
                 }
             }
             
-            if(index){
+            if(index>=0){
                 otherPlayers[index].remove();
                 otherPlayers.splice(index,1);
             }

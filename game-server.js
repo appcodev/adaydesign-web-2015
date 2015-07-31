@@ -1,3 +1,17 @@
+/*
+Ad@yDes!GN website 2015
+Server script
+
+@author Chalerchon Samana (@adaydesign)
+@since 2015
+@link www.adayd3sign.com
+
+@version 1.1
+- Game server #fix bug : disconnect
+@version 1.0
+- Game server : new connection, move, message, disconnect
+*/
+
 var express = require('express'),
     app = express(),
     server = require('http').createServer(app),
@@ -25,7 +39,7 @@ io.sockets.on('connection', function(socket){
         
         io.sockets.emit('list players',{"for id":playerId,"list":listPlayers});
         addNewPlayer(emitData);
-        console.log('new player:'+playerId+" | total players:"+listPlayers.length);
+        console.log('[+]: '+new Date(Date.now()).toDateString()+' New player:'+playerId+" | total players:"+listPlayers.length);
     });
     
     socket.on('send pos', function(data){
@@ -42,7 +56,7 @@ io.sockets.on('connection', function(socket){
     socket.on('disconnect', function(){
         io.sockets.emit('who leave',socket["id"]);
         clientDisconnect(socket["id"]);
-        console.log('disconect... who? '+socket["id"]+" | total:"+listPlayers.length);
+        console.log('[-]: '+new Date(Date.now()).toDateString()+' Disconected player: '+socket["id"]+" | total:"+listPlayers.length);
     });
 });
 
@@ -72,15 +86,16 @@ function updatePosData(posdata){
 }
 
 function clientDisconnect(id){
-    var index;
+    var dl_index = -1;
+    
     for(var i=0;i<listPlayers.length;i++){
         if(listPlayers[i]["id"]==id){
-            index = i;
+            dl_index = i;
             break;
         }
     }
     
-    if(index){
-        listPlayers.splice(index,1);
+    if(dl_index >= 0){
+        listPlayers.splice(dl_index,1);    
     }
 }
